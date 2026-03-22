@@ -70,7 +70,7 @@ A QR code will appear in your terminal. Scan it with WeChat on your phone and co
 ### 4. Start Claude Code with the channel
 
 ```bash
-claude --dangerously-skip-permissions --channels plugin:weixin@claude-plugins-official
+claude --dangerously-load-development-channels plugin:weixin@claude-plugins-official
 ```
 
 ### 5. Chat!
