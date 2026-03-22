@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { loginFlow } from "./auth/login.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = resolve(__dirname, "..");
@@ -102,6 +103,14 @@ switch (command) {
     break;
   case "uninstall":
     uninstall();
+    break;
+  case "login":
+    loginFlow().then(() => {
+      console.log("Login successful! Run /reload-plugins in Claude Code to apply.");
+    }).catch((err) => {
+      console.error("Login failed:", err instanceof Error ? err.message : err);
+      process.exit(1);
+    });
     break;
   default:
     console.log(`
