@@ -32,7 +32,10 @@ export async function loginFlow(
   }
 
   const qrcodeId = qrRes.qrcode;
-  const qrcodeUrl = qrRes.qrcode_img_content!;
+  if (!qrRes.qrcode_img_content) {
+    throw new Error("获取二维码失败: 未返回二维码内容");
+  }
+  const qrcodeUrl = qrRes.qrcode_img_content;
 
   // Display QR code in terminal
   qrcode.generate(qrcodeUrl, { small: true }, (code: string) => {

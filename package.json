@@ -4,17 +4,41 @@
   "description": "WeChat channel plugin for Claude Code — chat with Claude Code from WeChat",
   "type": "module",
   "main": "dist/index.js",
-  "bin": "./dist/server.js",
+  "bin": {
+    "claude-channel-weixin": "./dist/install.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "wechat",
+    "weixin",
+    "mcp",
+    "channel",
+    "plugin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yingwang/claude-code-weixin.git"
+  },
+  "author": "yingwang",
   "engines": {
     "node": ">=22"
   },
   "license": "Apache-2.0",
+  "files": [
+    "dist/",
+    "skills/",
+    ".claude-plugin/",
+    ".mcp.json",
+    "README.md"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "qrcode-terminal": "^0.12.0",

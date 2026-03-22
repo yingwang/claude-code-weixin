@@ -78,8 +78,8 @@ export function loadChannelConfig(): ChannelConfig {
   if (existsSync(configPath)) {
     try {
       settings = JSON.parse(readFileSync(configPath, "utf-8"));
-    } catch {
-      // ignore malformed config
+    } catch (err) {
+      console.error(`[WARN] Failed to parse ${configPath}:`, err);
     }
   }
 

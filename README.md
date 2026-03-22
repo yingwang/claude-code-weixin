@@ -29,51 +29,32 @@ Not yet working:
 
 ## Setup
 
-### 1. Clone and build
+### Quick install (via npm)
+
+```bash
+npx claude-channel-weixin install
+npx claude-channel-weixin login
+claude --dangerously-load-development-channels plugin:weixin@claude-plugins-official
+```
+
+### Manual install (from source)
 
 ```bash
 git clone https://github.com/yingwang/claude-code-weixin.git
 cd claude-code-weixin
-npm install
-npm run build
-```
-
-### 2. Register the plugin
-
-Add an entry to `~/.claude/plugins/installed_plugins.json` (create the file if it doesn't exist):
-
-```json
-{
-  "version": 2,
-  "plugins": {
-    "weixin@claude-plugins-official": [
-      {
-        "scope": "user",
-        "installPath": "/absolute/path/to/claude-code-weixin",
-        "version": "0.1.0"
-      }
-    ]
-  }
-}
-```
-
-Replace `/absolute/path/to/claude-code-weixin` with the actual path to your cloned directory.
-
-### 3. QR code login
-
-```bash
+npm install && npm run build
+node dist/install.js install
 node dist/cli.js login
-```
-
-A QR code will appear in your terminal. Scan it with WeChat on your phone and confirm the authorization. The bot token is automatically saved to `~/.claude/channels/weixin/.env`.
-
-### 4. Start Claude Code with the channel
-
-```bash
 claude --dangerously-load-development-channels plugin:weixin@claude-plugins-official
 ```
 
-### 5. Chat!
+### What each step does
+
+1. **Install** — registers the plugin in `~/.claude/plugins/installed_plugins.json`
+2. **Login** — shows a QR code in terminal; scan with WeChat to authorize; bot token is auto-saved to `~/.claude/channels/weixin/.env`
+3. **Start** — launches Claude Code with the WeChat channel enabled
+
+### Chat!
 
 Send a message from WeChat to the bot. Messages appear in your Claude Code session as `<channel source="weixin">` tags, and Claude can reply back through WeChat.
 
