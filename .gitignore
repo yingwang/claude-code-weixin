@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.js.map
+.env
+allowlist.json
+sync-buf.dat
+.orphaned_at
+.claude/
