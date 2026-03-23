@@ -9,70 +9,118 @@
  *   npx claude-channel-weixin login      Login via WeChat QR code
  */
 
-import { execSync } from "node:child_process";
-import { dirname, resolve } from "node:path";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { join, dirname, resolve } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { loginFlow } from "./auth/login.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = resolve(__dirname, "..");
 const MARKETPLACE_NAME = "claude-channel-weixin";
-const PLUGIN_REF = `weixin@${MARKETPLACE_NAME}`;
+const PLUGIN_KEY = `weixin@${MARKETPLACE_NAME}`;
 
-function run(cmd: string): string {
-  try {
-    return execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
-  } catch (err: any) {
-    return err.stderr?.toString() || err.stdout?.toString() || String(err);
-  }
+const CLAUDE_DIR = join(homedir(), ".claude");
+const PLUGINS_DIR = join(CLAUDE_DIR, "plugins");
+const PLUGINS_FILE = join(PLUGINS_DIR, "installed_plugins.json");
+const MARKETPLACE_DIR = join(PLUGINS_DIR, "marketplaces", MARKETPLACE_NAME);
+
+interface PluginEntry {
+  scope: string;
+  installPath: string;
+  version: string;
+  installedAt?: string;
+  lastUpdated?: string;
 }
 
-function findClaude(): string {
-  // Try common locations
-  for (const cmd of ["claude", `${process.env.HOME}/.claude/bin/claude`]) {
+interface PluginsFile {
+  version: number;
+  plugins: Record<string, PluginEntry[]>;
+}
+
+function ensureDir(dir: string): void {
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+}
+
+function loadPluginsFile(): PluginsFile {
+  if (existsSync(PLUGINS_FILE)) {
     try {
-      execSync(`${cmd} --version`, { stdio: "pipe" });
-      return cmd;
+      return JSON.parse(readFileSync(PLUGINS_FILE, "utf-8"));
     } catch {}
   }
-  throw new Error("Claude Code CLI not found. Install it first: https://github.com/anthropics/claude-code");
+  return { version: 2, plugins: {} };
+}
+
+function savePluginsFile(data: PluginsFile): void {
+  ensureDir(PLUGINS_DIR);
+  writeFileSync(PLUGINS_FILE, JSON.stringify(data, null, 2), "utf-8");
 }
 
 function install(): void {
   console.log("\n  Installing WeChat channel plugin...\n");
 
-  const claude = findClaude();
+  // Step 1: Register marketplace — copy .claude-plugin as marketplace definition
+  console.log("  Registering marketplace...");
+  ensureDir(join(MARKETPLACE_DIR, ".claude-plugin"));
 
-  // Step 1: Add marketplace
-  console.log("  Adding marketplace...");
-  const addResult = run(`${claude} plugin marketplace add ${PLUGIN_ROOT}`);
-  if (addResult.includes("error") || addResult.includes("Error")) {
-    // Try with GitHub URL as fallback
-    console.log("  Trying GitHub URL...");
-    run(`${claude} plugin marketplace add yingwang/claude-code-weixin`);
-  }
+  // Create marketplace definition
+  const marketplaceDef = {
+    name: MARKETPLACE_NAME,
+    description: "WeChat channel plugin for Claude Code",
+    plugins: [
+      {
+        name: "weixin",
+        description: "WeChat channel for Claude Code — messaging bridge with built-in access control.",
+        source: PLUGIN_ROOT,
+      },
+    ],
+  };
+  writeFileSync(
+    join(MARKETPLACE_DIR, ".claude-plugin", "marketplace.json"),
+    JSON.stringify(marketplaceDef, null, 2),
+    "utf-8"
+  );
 
-  // Step 2: Install plugin
-  console.log("  Installing plugin...");
-  const installResult = run(`${claude} plugin install ${PLUGIN_REF}`);
+  // Step 2: Register plugin in installed_plugins.json
+  console.log("  Registering plugin...");
+  const data = loadPluginsFile();
+  const now = new Date().toISOString();
+
+  // Remove old key if exists (from previous install with different marketplace name)
+  delete data.plugins["weixin@claude-plugins-official"];
+
+  data.plugins[PLUGIN_KEY] = [
+    {
+      scope: "user",
+      installPath: PLUGIN_ROOT,
+      version: "0.2.3",
+      installedAt: now,
+      lastUpdated: now,
+    },
+  ];
+  savePluginsFile(data);
 
   console.log("\n  WeChat channel plugin installed!\n");
   console.log("  Plugin path:", PLUGIN_ROOT);
   console.log("\n  Next steps:");
-  console.log(`  1. Login:  npx claude-channel-weixin login`);
-  console.log(`  2. Start:  claude --dangerously-load-development-channels plugin:${PLUGIN_REF}`);
+  console.log("  1. Login:  npx claude-channel-weixin login");
+  console.log(`  2. Start:  claude --dangerously-load-development-channels plugin:${PLUGIN_KEY}`);
   console.log("");
 }
 
 function uninstall(): void {
-  try {
-    const claude = findClaude();
-    run(`${claude} plugin uninstall ${PLUGIN_REF}`);
-    run(`${claude} plugin marketplace remove ${MARKETPLACE_NAME}`);
-    console.log("Plugin and marketplace removed.");
-  } catch (err) {
-    console.error("Uninstall failed:", err instanceof Error ? err.message : err);
+  // Remove from installed_plugins.json
+  const data = loadPluginsFile();
+  delete data.plugins[PLUGIN_KEY];
+  delete data.plugins["weixin@claude-plugins-official"];
+  savePluginsFile(data);
+
+  // Remove marketplace directory
+  if (existsSync(MARKETPLACE_DIR)) {
+    try { rmSync(MARKETPLACE_DIR, { recursive: true }); } catch {}
   }
+
+  console.log("Plugin and marketplace removed.");
 }
 
 const command = process.argv[2];
