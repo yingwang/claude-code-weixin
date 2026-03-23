@@ -6,92 +6,72 @@
  * Usage:
  *   npx claude-channel-weixin install    Register plugin with Claude Code
  *   npx claude-channel-weixin uninstall  Remove plugin registration
+ *   npx claude-channel-weixin login      Login via WeChat QR code
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { join, dirname, resolve } from "node:path";
-import { homedir } from "node:os";
+import { execSync } from "node:child_process";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loginFlow } from "./auth/login.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = resolve(__dirname, "..");
+const MARKETPLACE_NAME = "claude-channel-weixin";
+const PLUGIN_REF = `weixin@${MARKETPLACE_NAME}`;
 
-const PLUGINS_DIR = join(homedir(), ".claude", "plugins");
-const PLUGINS_FILE = join(PLUGINS_DIR, "installed_plugins.json");
-const PLUGIN_KEY = "weixin@claude-plugins-official";
-
-interface PluginEntry {
-  scope: string;
-  installPath: string;
-  version: string;
-  installedAt?: string;
-  lastUpdated?: string;
+function run(cmd: string): string {
+  try {
+    return execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+  } catch (err: any) {
+    return err.stderr?.toString() || err.stdout?.toString() || String(err);
+  }
 }
 
-interface PluginsFile {
-  version: number;
-  plugins: Record<string, PluginEntry[]>;
-}
-
-function loadPluginsFile(): PluginsFile {
-  if (existsSync(PLUGINS_FILE)) {
+function findClaude(): string {
+  // Try common locations
+  for (const cmd of ["claude", `${process.env.HOME}/.claude/bin/claude`]) {
     try {
-      return JSON.parse(readFileSync(PLUGINS_FILE, "utf-8"));
-    } catch {
-      // corrupted file, start fresh
-    }
+      execSync(`${cmd} --version`, { stdio: "pipe" });
+      return cmd;
+    } catch {}
   }
-  return { version: 2, plugins: {} };
-}
-
-function savePluginsFile(data: PluginsFile): void {
-  if (!existsSync(PLUGINS_DIR)) {
-    mkdirSync(PLUGINS_DIR, { recursive: true });
-  }
-  writeFileSync(PLUGINS_FILE, JSON.stringify(data, null, 2), "utf-8");
+  throw new Error("Claude Code CLI not found. Install it first: https://github.com/anthropics/claude-code");
 }
 
 function install(): void {
-  const data = loadPluginsFile();
-  const now = new Date().toISOString();
+  console.log("\n  Installing WeChat channel plugin...\n");
 
-  const entry: PluginEntry = {
-    scope: "user",
-    installPath: PLUGIN_ROOT,
-    version: "0.1.0",
-    installedAt: now,
-    lastUpdated: now,
-  };
+  const claude = findClaude();
 
-  // Check if already installed
-  const existing = data.plugins[PLUGIN_KEY];
-  if (existing?.some((e) => e.installPath === PLUGIN_ROOT)) {
-    console.log("Plugin already registered at:", PLUGIN_ROOT);
-    console.log("To re-register, run: npx claude-channel-weixin uninstall && npx claude-channel-weixin install");
-    return;
+  // Step 1: Add marketplace
+  console.log("  Adding marketplace...");
+  const addResult = run(`${claude} plugin marketplace add ${PLUGIN_ROOT}`);
+  if (addResult.includes("error") || addResult.includes("Error")) {
+    // Try with GitHub URL as fallback
+    console.log("  Trying GitHub URL...");
+    run(`${claude} plugin marketplace add yingwang/claude-code-weixin`);
   }
 
-  // Add or replace
-  data.plugins[PLUGIN_KEY] = [entry];
-  savePluginsFile(data);
+  // Step 2: Install plugin
+  console.log("  Installing plugin...");
+  const installResult = run(`${claude} plugin install ${PLUGIN_REF}`);
 
-  console.log("\n  WeChat channel plugin registered successfully!\n");
+  console.log("\n  WeChat channel plugin installed!\n");
   console.log("  Plugin path:", PLUGIN_ROOT);
   console.log("\n  Next steps:");
-  console.log("  1. Login:  node " + join(PLUGIN_ROOT, "dist/cli.js") + " login");
-  console.log("  2. Start:  claude --dangerously-load-development-channels plugin:weixin@claude-plugins-official");
+  console.log(`  1. Login:  npx claude-channel-weixin login`);
+  console.log(`  2. Start:  claude --dangerously-load-development-channels plugin:${PLUGIN_REF}`);
   console.log("");
 }
 
 function uninstall(): void {
-  const data = loadPluginsFile();
-  if (data.plugins[PLUGIN_KEY]) {
-    delete data.plugins[PLUGIN_KEY];
-    savePluginsFile(data);
-    console.log("Plugin unregistered.");
-  } else {
-    console.log("Plugin was not registered.");
+  try {
+    const claude = findClaude();
+    run(`${claude} plugin uninstall ${PLUGIN_REF}`);
+    run(`${claude} plugin marketplace remove ${MARKETPLACE_NAME}`);
+    console.log("Plugin and marketplace removed.");
+  } catch (err) {
+    console.error("Uninstall failed:", err instanceof Error ? err.message : err);
   }
 }
 
