@@ -15,17 +15,15 @@ This is a Claude Code **channel plugin** — an MCP server with the `claude/chan
 
 ## Features
 
-Working:
 - Text messaging (send and receive)
 - Image recognition (download, decrypt, and pass to Claude for vision)
+- File download (PDF, documents — Claude can read and summarize)
+- Video download
+- Voice messages (server-side speech-to-text when available, or raw audio download)
+- Outbound file/image/video sending via CDN upload
 - Multi-bot support (multiple WeChat accounts in one session)
 - QR code login (scan with WeChat to authorize)
 - Pairing-based access control
-
-Not yet working:
-- Outbound file/image sending (`send_file` — CDN upload format needs work)
-- Voice messages
-- Inbound file/video download
 
 ## Setup
 
