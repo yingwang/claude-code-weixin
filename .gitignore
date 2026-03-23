@@ -7,3 +7,5 @@ sync-buf.dat
 .orphaned_at
 .claude/
 *.tgz
+*.DS_Store
+package/
