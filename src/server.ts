@@ -18,7 +18,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { WeixinApi } from "./weixin/api.js";
-import { MessageItemType } from "./weixin/types.js";
+import { MessageItemType, type MessageItemOutbound } from "./weixin/types.js";
 import { loadChannelConfig, type ChannelConfig } from "./channel-config.js";
 import { AllowlistManager } from "./auth/allowlist.js";
 import { PairingManager } from "./auth/pairing.js";
@@ -197,29 +197,43 @@ async function handleSendFile(args: {
 
   const fileApi = chatApiMap.get(args.chat_id) || api;
   try {
-    const uploaded = await uploadFile(fileApi, args.file_path);
-    const typeMap = {
-      image: MessageItemType.IMAGE,
-      video: MessageItemType.VIDEO,
-      file: MessageItemType.FILE,
-    } as const;
-    const fileType = (args.file_type || "file") as keyof typeof typeMap;
-    const msgType = typeMap[fileType] ?? MessageItemType.FILE;
+    const mediaTypeMap = { image: 1, video: 2, file: 3 } as const;
+    const fileType = (args.file_type || "file") as keyof typeof mediaTypeMap;
+    const mediaType = mediaTypeMap[fileType] ?? 3;
 
-    const res = await fileApi.sendMessage(
-      args.chat_id,
-      {
-        type: msgType,
-        cdn: {
-          file_id: uploaded.fileId,
-          file_url: uploaded.fileUrl,
-          aes_key: uploaded.aesKey,
-          file_size: uploaded.fileSize,
-          file_name: uploaded.fileName,
+    const uploaded = await uploadFile(fileApi, args.file_path, args.chat_id, mediaType);
+    const aesKeyBase64 = Buffer.from(uploaded.aesKey, "hex").toString("base64");
+
+    // Build message item per file type (OpenClaw format)
+    let content: MessageItemOutbound;
+    if (fileType === "image") {
+      content = {
+        type: MessageItemType.IMAGE,
+        image_item: {
+          media: { encrypt_query_param: uploaded.downloadParam, aes_key: aesKeyBase64, encrypt_type: 1 },
+          mid_size: uploaded.ciphertextSize,
         },
-      },
-      ctx
-    );
+      } as any;
+    } else if (fileType === "video") {
+      content = {
+        type: MessageItemType.VIDEO,
+        video_item: {
+          media: { encrypt_query_param: uploaded.downloadParam, aes_key: aesKeyBase64, encrypt_type: 1 },
+          video_size: uploaded.ciphertextSize,
+        },
+      } as any;
+    } else {
+      content = {
+        type: MessageItemType.FILE,
+        file_item: {
+          media: { encrypt_query_param: uploaded.downloadParam, aes_key: aesKeyBase64, encrypt_type: 1 },
+          file_name: uploaded.fileName,
+          len: String(uploaded.fileSize),
+        },
+      } as any;
+    }
+
+    const res = await fileApi.sendMessage(args.chat_id, content, ctx);
 
     if (res.ret && res.ret !== 0) {
       return {

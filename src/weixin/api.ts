@@ -131,16 +131,20 @@ export class WeixinApi {
     );
   }
 
-  /** Get pre-signed CDN upload URL */
-  async getUploadUrl(
-    fileName: string,
-    fileSize: number,
-    aesKey: string
-  ): Promise<GetUploadUrlResponse> {
+  /** Get pre-signed CDN upload params */
+  async getUploadUrl(params: {
+    filekey: string;
+    media_type: number;
+    to_user_id: string;
+    rawsize: number;
+    rawfilemd5: string;
+    filesize: number;
+    aeskey: string;
+  }): Promise<GetUploadUrlResponse> {
     return this.request<GetUploadUrlResponse>(
       "POST",
       "/ilink/bot/getuploadurl",
-      { file_name: fileName, file_size: fileSize, aes_key: aesKey }
+      { ...params, no_need_thumb: true, base_info: { channel_version: "0.1.0" } }
     );
   }
 

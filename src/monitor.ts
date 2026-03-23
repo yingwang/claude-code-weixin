@@ -65,6 +65,32 @@ async function tryDownloadImage(item: MessageItemInbound, msgId: number): Promis
   }
 }
 
+async function tryDownloadMedia(
+  encryptQueryParam: string | undefined,
+  aesKeyStr: string | undefined,
+  msgId: number,
+  ext: string,
+  label: string
+): Promise<string | null> {
+  if (!encryptQueryParam) return null;
+  try {
+    const aesHex = parseAesKeyToHex(aesKeyStr);
+    const url = `${CDN_BASE_URL}/download?encrypted_query_param=${encodeURIComponent(encryptQueryParam)}`;
+    logger.debug(`Downloading ${label} from CDN`);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`CDN ${res.status}`);
+    const encrypted = Buffer.from(await res.arrayBuffer());
+    const buf = aesHex ? aesDecrypt(encrypted, aesHex) : encrypted;
+    const filePath = `/tmp/weixin-${label}-${Date.now()}.${ext}`;
+    writeFileSync(filePath, buf);
+    logger.info(`${label} saved to ${filePath} (${buf.length} bytes)`);
+    return filePath;
+  } catch (err) {
+    logger.error(`${label} download failed for ${msgId}:`, err);
+    return null;
+  }
+}
+
 type MessageCallback = (
   fromUser: string,
   text: string,
@@ -154,6 +180,12 @@ export class Monitor {
       return;
     }
 
+    // Debug: log raw item structure for all messages
+    try {
+      const { appendFileSync: _af } = await import("node:fs");
+      _af("/tmp/weixin-raw.log", `[${new Date().toISOString()}] msgType=${msg.message_type} itemType=${firstItem.type} keys=${JSON.stringify(Object.keys(firstItem))} item=${JSON.stringify(firstItem).slice(0, 1000)}\n`);
+    } catch {}
+
     const itemType = firstItem.type ?? msg.message_type;
 
     switch (itemType) {
@@ -174,17 +206,63 @@ export class Monitor {
         break;
       }
 
-      case MessageItemType.FILE:
-        text = `[文件: ${firstItem.cdn_item?.file_name || "unknown"}]`;
+      case MessageItemType.FILE: {
+        const fileName = firstItem.file_item?.file_name || firstItem.cdn_item?.file_name || "unknown";
+        const filePath = await tryDownloadMedia(
+          firstItem.file_item?.media?.encrypt_query_param,
+          firstItem.file_item?.media?.aes_key,
+          msg.message_id,
+          fileName.split(".").pop() || "bin",
+          "file"
+        );
+        if (filePath) {
+          meta.file_path = filePath;
+          meta.file_name = fileName;
+          text = `[文件: ${filePath}]`;
+        } else {
+          text = `[文件: ${fileName}]`;
+        }
         break;
+      }
 
-      case MessageItemType.VIDEO:
-        text = `[视频: ${firstItem.cdn_item?.file_name || "unknown"}]`;
+      case MessageItemType.VIDEO: {
+        const videoPath = await tryDownloadMedia(
+          firstItem.video_item?.media?.encrypt_query_param,
+          firstItem.video_item?.media?.aes_key,
+          msg.message_id,
+          "mp4",
+          "video"
+        );
+        if (videoPath) {
+          meta.video_path = videoPath;
+          text = `[视频: ${videoPath}]`;
+        } else {
+          text = `[视频: ${firstItem.video_item?.file_name || firstItem.cdn_item?.file_name || "video"}]`;
+        }
         break;
+      }
 
-      case MessageItemType.VOICE:
-        text = "[语音消息 - 暂不支持]";
+      case MessageItemType.VOICE: {
+        // Try server-side speech-to-text first
+        if (firstItem.voice_item?.text) {
+          text = firstItem.voice_item.text;
+          break;
+        }
+        const voicePath = await tryDownloadMedia(
+          firstItem.voice_item?.media?.encrypt_query_param,
+          firstItem.voice_item?.media?.aes_key,
+          msg.message_id,
+          "silk",
+          "voice"
+        );
+        if (voicePath) {
+          meta.voice_path = voicePath;
+          text = `[语音: ${voicePath}]`;
+        } else {
+          text = "[语音消息]";
+        }
         break;
+      }
 
       default:
         text = `[未知消息类型: ${itemType}]`;

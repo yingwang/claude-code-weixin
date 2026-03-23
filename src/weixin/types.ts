@@ -40,6 +40,30 @@ export interface ImageItem {
   mid_size?: number;
 }
 
+export interface VoiceItem {
+  media?: ImageItemMedia;
+  encode_type?: number;
+  bits_per_sample?: number;
+  sample_rate?: number;
+  playtime?: number;
+  text?: string;
+}
+
+export interface FileItem {
+  media?: ImageItemMedia;
+  file_name?: string;
+  md5?: string;
+  len?: string;
+}
+
+export interface VideoItem {
+  media?: ImageItemMedia;
+  video_size?: number;
+  play_length?: number;
+  video_md5?: string;
+  file_name?: string;
+}
+
 export interface MessageItemInbound {
   type: number;
   create_time_ms?: number;
@@ -48,6 +72,9 @@ export interface MessageItemInbound {
   text_item?: TextItem;
   cdn_item?: CdnItem;
   image_item?: ImageItem;
+  voice_item?: VoiceItem;
+  file_item?: FileItem;
+  video_item?: VideoItem;
 }
 
 export interface WeixinMessage {
@@ -133,11 +160,8 @@ export interface GetUploadUrlResponse {
   err_msg?: string;
   errcode?: number;
   errmsg?: string;
-  data?: {
-    upload_url: string;
-    file_id: string;
-    file_url: string;
-  };
+  upload_param?: string;
+  thumb_upload_param?: string;
 }
 
 export interface GetConfigResponse {
