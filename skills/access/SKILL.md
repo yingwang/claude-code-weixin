@@ -17,9 +17,10 @@ The config is stored at `~/.claude/channels/weixin/config.json`.
 
 ### `pair <code>`
 Approve a pending pairing request. The 6-character hex code was shown to the WeChat user when they first messaged the bot.
-1. Read the current allowlist from `~/.claude/channels/weixin/allowlist.json`
-2. Note: The pairing manager runs in-memory in the plugin process. Tell the user the sender will be added once the plugin validates the code.
-3. As a shortcut, ask the user for the sender ID and add it directly to the allowlist file.
+
+**IMPORTANT:** Use the `approve_pairing` MCP tool with the code. Do NOT manually edit the allowlist file. The tool validates the code against the in-memory pairing manager and adds the sender automatically.
+
+Example: If the user runs `/weixin:access pair abc123`, call the `approve_pairing` tool with `code: "abc123"`.
 
 ### `deny <code>`
 Reject a pending pairing request. Just inform the user that the code will be invalidated.
