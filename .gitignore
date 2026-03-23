@@ -6,3 +6,4 @@ allowlist.json
 sync-buf.dat
 .orphaned_at
 .claude/
+*.tgz
