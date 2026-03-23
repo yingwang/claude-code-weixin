@@ -77,6 +77,7 @@ function install(): void {
       "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
       name: MARKETPLACE,
       description: "WeChat channel plugin for Claude Code",
+      owner: { name: "yingwang", email: "yingwang@users.noreply.github.com" },
       plugins: [{
         name: PLUGIN_NAME,
         description: "WeChat messaging bridge with built-in access control.",

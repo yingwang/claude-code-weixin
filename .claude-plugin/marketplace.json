@@ -1,11 +1,17 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "claude-channel-weixin",
-  "description": "WeChat channel plugin marketplace for Claude Code",
+  "description": "WeChat channel plugin for Claude Code",
+  "owner": {
+    "name": "yingwang",
+    "email": "yingwang@users.noreply.github.com"
+  },
   "plugins": [
     {
       "name": "weixin",
-      "description": "WeChat channel for Claude Code — messaging bridge with built-in access control.",
-      "source": "./"
+      "description": "WeChat messaging bridge with built-in access control.",
+      "category": "productivity",
+      "source": "./external_plugins/weixin"
     }
   ]
 }
