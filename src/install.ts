@@ -18,7 +18,7 @@ const PLUGIN_SRC = resolve(__dirname, "..");
 
 const MARKETPLACE = "claude-channel-weixin";
 const PLUGIN_NAME = "weixin";
-const VERSION = "0.2.4";
+const VERSION = JSON.parse(readFileSync(join(PLUGIN_SRC, "package.json"), "utf-8")).version;
 const PLUGIN_KEY = `${PLUGIN_NAME}@${MARKETPLACE}`;
 
 const CLAUDE_DIR = join(homedir(), ".claude");
