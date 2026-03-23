@@ -49,10 +49,9 @@ claude --dangerously-load-development-channels plugin:weixin@claude-channel-weix
 1. **Install** — registers the marketplace and installs the plugin into Claude Code
 2. **Login** — shows a QR code in terminal; scan with WeChat to authorize; bot token auto-saved
 3. **Start** — launches Claude Code with the WeChat channel enabled
+4. **Pair** — send a message from WeChat, then approve the pairing code with `/weixin:access pair <code>`
 
-### Chat!
-
-Send a message from WeChat to the bot. Messages appear in your Claude Code session as `<channel source="weixin">` tags, and Claude can reply back through WeChat.
+After pairing, messages flow through automatically.
 
 ## Slash Commands
 
