@@ -27,30 +27,21 @@ This is a Claude Code **channel plugin** — an MCP server with the `claude/chan
 
 ## Setup
 
-### Quick install
+### Install
 
 ```bash
-sudo npm install -g claude-channel-weixin
-claude-channel-weixin install
-claude-channel-weixin login
-claude --dangerously-load-development-channels plugin:weixin@claude-channel-weixin
-```
-
-### Install from source
-
-```bash
-git clone https://github.com/yingwang/claude-code-weixin.git
-cd claude-code-weixin
-npm install && npm run build
-node dist/install.js install
-node dist/cli.js login
+claude plugin marketplace add https://github.com/yingwang/claude-code-weixin.git
+claude plugin install weixin@claude-channel-weixin
+npx claude-channel-weixin login
 claude --dangerously-load-development-channels plugin:weixin@claude-channel-weixin
 ```
 
 ### What each step does
 
-1. **Install** — copies plugin files to Claude Code's plugin cache and registers it
-2. **Login** — shows a QR code in terminal; scan with WeChat to authorize; bot token is auto-saved to `~/.claude/channels/weixin/.env`
+1. **Add marketplace** — registers the plugin source with Claude Code
+2. **Install plugin** — downloads and enables the WeChat channel plugin
+3. **Login** — shows a QR code; scan with WeChat to authorize; bot token auto-saved
+4. **Start** — launches Claude Code with the WeChat channel enabled
 3. **Start** — launches Claude Code with the WeChat channel enabled
 
 ### Chat!
