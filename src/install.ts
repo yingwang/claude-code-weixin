@@ -3,8 +3,8 @@
 /**
  * Installer for claude-code-weixin.
  *
- * Copies plugin files into Claude Code's plugin cache and registers it,
- * mirroring how official marketplace plugins are installed.
+ * Copies plugin files into a local marketplace structure that
+ * Claude Code can discover, matching how official plugins work.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, cpSync, rmSync } from "node:fs";
@@ -15,33 +15,25 @@ import { loginFlow } from "./auth/login.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_SRC = resolve(__dirname, "..");
+const VERSION = JSON.parse(readFileSync(join(PLUGIN_SRC, "package.json"), "utf-8")).version;
 
 const MARKETPLACE = "claude-channel-weixin";
 const PLUGIN_NAME = "weixin";
-const VERSION = JSON.parse(readFileSync(join(PLUGIN_SRC, "package.json"), "utf-8")).version;
 const PLUGIN_KEY = `${PLUGIN_NAME}@${MARKETPLACE}`;
 
-const CLAUDE_DIR = join(homedir(), ".claude");
-const PLUGINS_DIR = join(CLAUDE_DIR, "plugins");
-const CACHE_DIR = join(PLUGINS_DIR, "cache", MARKETPLACE, PLUGIN_NAME, VERSION);
+const PLUGINS_DIR = join(homedir(), ".claude", "plugins");
 const MARKETPLACE_DIR = join(PLUGINS_DIR, "marketplaces", MARKETPLACE);
+const PLUGIN_DIR = join(MARKETPLACE_DIR, "external_plugins", PLUGIN_NAME);
+const CACHE_DIR = join(PLUGINS_DIR, "cache", MARKETPLACE, PLUGIN_NAME, VERSION);
 const PLUGINS_FILE = join(PLUGINS_DIR, "installed_plugins.json");
 
 function ensureDir(dir: string): void {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
-interface PluginEntry {
-  scope: string;
-  installPath: string;
-  version: string;
-  installedAt?: string;
-  lastUpdated?: string;
-}
-
 interface PluginsFile {
   version: number;
-  plugins: Record<string, PluginEntry[]>;
+  plugins: Record<string, { scope: string; installPath: string; version: string; installedAt?: string; lastUpdated?: string }[]>;
 }
 
 function loadPluginsFile(): PluginsFile {
@@ -51,15 +43,13 @@ function loadPluginsFile(): PluginsFile {
   return { version: 2, plugins: {} };
 }
 
-function install(): void {
-  console.log("\n  Installing WeChat channel plugin for Claude Code...\n");
+const COPY_ITEMS = ["dist", "skills", ".claude-plugin", ".mcp.json", "package.json", "node_modules"];
 
-  // Step 1: Copy plugin files to cache (same structure as official plugins)
-  console.log("  Copying plugin files to cache...");
-  ensureDir(CACHE_DIR);
-  for (const item of ["dist", "skills", ".claude-plugin", ".mcp.json", "package.json", "node_modules"]) {
+function copyPluginFiles(dest: string): void {
+  ensureDir(dest);
+  for (const item of COPY_ITEMS) {
     const src = join(PLUGIN_SRC, item);
-    const dst = join(CACHE_DIR, item);
+    const dst = join(dest, item);
     if (existsSync(src)) {
       try {
         if (existsSync(dst)) rmSync(dst, { recursive: true });
@@ -69,9 +59,17 @@ function install(): void {
       }
     }
   }
+}
 
-  // Step 2: Create marketplace entry
-  console.log("  Registering marketplace...");
+function install(): void {
+  console.log("\n  Installing WeChat channel plugin for Claude Code...\n");
+
+  // Step 1: Copy plugin into marketplace/external_plugins/weixin/
+  // (this is how Claude Code discovers plugins within a marketplace)
+  console.log("  Setting up marketplace...");
+  copyPluginFiles(PLUGIN_DIR);
+
+  // Create marketplace.json
   ensureDir(join(MARKETPLACE_DIR, ".claude-plugin"));
   writeFileSync(
     join(MARKETPLACE_DIR, ".claude-plugin", "marketplace.json"),
@@ -82,17 +80,21 @@ function install(): void {
       plugins: [{
         name: PLUGIN_NAME,
         description: "WeChat messaging bridge with built-in access control.",
-        source: { source: "local", path: CACHE_DIR },
+        category: "productivity",
+        source: "./external_plugins/weixin",
       }],
     }, null, 2),
     "utf-8"
   );
 
+  // Step 2: Copy to cache (where Claude Code loads from at runtime)
+  console.log("  Copying to plugin cache...");
+  copyPluginFiles(CACHE_DIR);
+
   // Step 3: Register in installed_plugins.json
   console.log("  Registering plugin...");
   const data = loadPluginsFile();
   const now = new Date().toISOString();
-  // Clean up old entries
   delete data.plugins["weixin@claude-plugins-official"];
   data.plugins[PLUGIN_KEY] = [{
     scope: "user",
@@ -105,23 +107,19 @@ function install(): void {
   writeFileSync(PLUGINS_FILE, JSON.stringify(data, null, 2), "utf-8");
 
   console.log("\n  WeChat channel plugin installed!\n");
-  console.log("  Cache path:", CACHE_DIR);
+  console.log("  Version:", VERSION);
   console.log("\n  Next steps:");
-  console.log("  1. Login:    claude-channel-weixin login");
-  console.log(`  2. Start:    claude --dangerously-load-development-channels plugin:${PLUGIN_KEY}`);
+  console.log("  1. Login:  claude-channel-weixin login");
+  console.log(`  2. Start:  claude --dangerously-load-development-channels plugin:${PLUGIN_KEY}`);
   console.log("");
 }
 
 function uninstall(): void {
-  // Remove cache
-  if (existsSync(CACHE_DIR)) {
-    try { rmSync(CACHE_DIR, { recursive: true }); } catch {}
+  for (const dir of [PLUGIN_DIR, CACHE_DIR, MARKETPLACE_DIR]) {
+    if (existsSync(dir)) {
+      try { rmSync(dir, { recursive: true }); } catch {}
+    }
   }
-  // Remove marketplace
-  if (existsSync(MARKETPLACE_DIR)) {
-    try { rmSync(MARKETPLACE_DIR, { recursive: true }); } catch {}
-  }
-  // Remove from installed_plugins.json
   const data = loadPluginsFile();
   delete data.plugins[PLUGIN_KEY];
   delete data.plugins["weixin@claude-plugins-official"];
