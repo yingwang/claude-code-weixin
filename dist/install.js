@@ -8,6 +8,9 @@
  *   npx claude-channel-weixin login      Login via WeChat QR code
  */
 import { execSync } from "node:child_process";
+import { existsSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 import { loginFlow } from "./auth/login.js";
 const GITHUB_URL = "https://github.com/yingwang/claude-code-weixin.git";
 const MARKETPLACE = "claude-channel-weixin";
@@ -35,7 +38,19 @@ function run(cmd) {
 function install() {
     console.log("\n  Installing WeChat channel plugin for Claude Code...\n");
     const claude = findClaude();
-    // Step 1: Add marketplace
+    // Clean old cache to ensure fresh install
+    const cacheDir = join(homedir(), ".claude", "plugins", "cache", MARKETPLACE);
+    const marketplaceDir = join(homedir(), ".claude", "plugins", "marketplaces", MARKETPLACE);
+    if (existsSync(cacheDir)) {
+        rmSync(cacheDir, { recursive: true });
+    }
+    if (existsSync(marketplaceDir)) {
+        rmSync(marketplaceDir, { recursive: true });
+    }
+    // Remove old plugin registration
+    run(`${claude} plugin uninstall ${PLUGIN_REF}`);
+    run(`${claude} plugin marketplace remove ${MARKETPLACE}`);
+    // Step 1: Add marketplace (clones fresh from GitHub)
     console.log("  Adding marketplace...");
     const add = run(`${claude} plugin marketplace add ${GITHUB_URL}`);
     if (!add.ok && !add.output.includes("already")) {
