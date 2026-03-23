@@ -1,6 +1,6 @@
 {
   "name": "claude-channel-weixin",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "description": "WeChat channel plugin for Claude Code — chat with Claude Code from WeChat",
   "type": "module",
   "main": "dist/index.js",
@@ -12,7 +12,8 @@
     "dev": "tsc --watch",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "postinstall": "npm run build 2>/dev/null || true"
   },
   "keywords": [
     "claude",

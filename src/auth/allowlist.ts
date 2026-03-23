@@ -18,6 +18,7 @@ export class AllowlistManager {
 
   isAllowed(senderId: string): boolean {
     if (this.config.dmPolicy === "disabled") return false;
+    this.load(); // re-read file on each check (file may be updated by /weixin:access skill)
     return this.allowed.has(senderId);
   }
 

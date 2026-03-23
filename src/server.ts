@@ -123,6 +123,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["chat_id"],
       },
     },
+    {
+      name: "approve_pairing",
+      description: "Approve a WeChat pairing code to allow a user to send messages. Use this when the user runs /weixin:access pair <code>.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          code: {
+            type: "string",
+            description: "The 6-character pairing code from WeChat",
+          },
+        },
+        required: ["code"],
+      },
+    },
   ],
 }));
 
@@ -138,6 +152,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       );
     case "send_typing":
       return handleSendTyping(args as { chat_id: string });
+    case "approve_pairing": {
+      const { code } = args as { code: string };
+      const senderId = pairing.validateCode(code);
+      if (!senderId) {
+        return { content: [{ type: "text" as const, text: "Invalid or expired pairing code." }] };
+      }
+      allowlist.add(senderId);
+      return { content: [{ type: "text" as const, text: `Approved: ${senderId}` }] };
+    }
     default:
       return { content: [{ type: "text", text: `Unknown tool: ${name}` }] };
   }
