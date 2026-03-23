@@ -1,6 +1,6 @@
 {
   "name": "claude-channel-weixin",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "WeChat channel plugin for Claude Code — chat with Claude Code from WeChat",
   "type": "module",
   "main": "dist/index.js",
@@ -35,7 +35,7 @@
   "files": [
     "dist/",
     "skills/",
-    ".claude-plugin/",
+    ".claude-plugin/plugin.json",
     ".mcp.json",
     "README.md"
   ],
