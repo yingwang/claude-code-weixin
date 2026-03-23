@@ -180,12 +180,6 @@ export class Monitor {
       return;
     }
 
-    // Debug: log raw item structure for all messages
-    try {
-      const { appendFileSync: _af } = await import("node:fs");
-      _af("/tmp/weixin-raw.log", `[${new Date().toISOString()}] msgType=${msg.message_type} itemType=${firstItem.type} keys=${JSON.stringify(Object.keys(firstItem))} item=${JSON.stringify(firstItem).slice(0, 1000)}\n`);
-    } catch {}
-
     const itemType = firstItem.type ?? msg.message_type;
 
     switch (itemType) {

@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, mkdirSync, writeFileSync, chmodSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync, chmodSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -91,8 +91,36 @@ export function loadChannelConfig(): ChannelConfig {
   };
 }
 
+/** Clear the sync buffer when token changes to avoid stale cursor issues */
+function clearSyncBufIfTokenChanged(newToken: string): void {
+  const dir = getChannelDir();
+  const syncBufPath = join(dir, "sync-buf.dat");
+  const tokenHashPath = join(dir, ".token-hash");
+
+  const newHash = newToken.slice(0, 16);
+  let oldHash = "";
+  try {
+    if (existsSync(tokenHashPath)) {
+      oldHash = readFileSync(tokenHashPath, "utf-8").trim();
+    }
+  } catch {}
+
+  if (oldHash && oldHash !== newHash) {
+    try {
+      if (existsSync(syncBufPath)) {
+        unlinkSync(syncBufPath);
+      }
+    } catch {}
+  }
+
+  try {
+    writeFileSync(tokenHashPath, newHash, "utf-8");
+  } catch {}
+}
+
 /** Save the bot token to .env with restricted permissions */
 export function saveBotToken(token: string): void {
+  clearSyncBufIfTokenChanged(token);
   const envPath = getEnvPath();
   // Ensure dir exists
   getChannelDir();
