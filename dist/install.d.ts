@@ -2,7 +2,9 @@
 /**
  * Installer for claude-code-weixin.
  *
- * Copies plugin files into a local marketplace structure that
- * Claude Code can discover, matching how official plugins work.
+ * Usage:
+ *   npx claude-channel-weixin install    Install plugin into Claude Code
+ *   npx claude-channel-weixin uninstall  Remove plugin
+ *   npx claude-channel-weixin login      Login via WeChat QR code
  */
 export {};
