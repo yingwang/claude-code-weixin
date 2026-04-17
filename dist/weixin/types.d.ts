@@ -23,6 +23,7 @@ export interface ImageItemMedia {
     encrypt_query_param?: string;
     aes_key?: string;
     encrypt_type?: number;
+    full_url?: string;
 }
 export interface ImageItem {
     media?: ImageItemMedia;

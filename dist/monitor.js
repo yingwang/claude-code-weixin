@@ -33,12 +33,18 @@ async function tryDownloadImage(item, msgId) {
         const imageItem = item.image_item;
         const cdnItem = item.cdn_item;
         let buf;
+        if (process.env.WEIXIN_DEBUG_MEDIA === "1") {
+            const debugPath = `/tmp/weixin-img-debug-${msgId}.json`;
+            writeFileSync(debugPath, JSON.stringify({ image_item: imageItem, cdn_item: cdnItem, raw_item: item }, null, 2));
+            logger.info(`Image item debug dumped to ${debugPath}`);
+        }
         if (imageItem?.media?.encrypt_query_param) {
-            // OpenClaw format
+            // OpenClaw format — prefer full_url (includes taskid) over manual construction
             const aesKeyB64 = imageItem.media.aes_key || imageItem.aeskey;
             const aesHex = parseAesKeyToHex(aesKeyB64 || imageItem.aeskey);
-            const url = `${CDN_BASE_URL}/download?encrypted_query_param=${encodeURIComponent(imageItem.media.encrypt_query_param)}`;
-            logger.debug(`Downloading image (OpenClaw format) from CDN`);
+            const url = imageItem.media.full_url
+                || `${CDN_BASE_URL}/download?encrypted_query_param=${encodeURIComponent(imageItem.media.encrypt_query_param)}`;
+            logger.debug(`Downloading image (OpenClaw format) from: ${url.slice(0, 80)}...`);
             const res = await fetch(url);
             if (!res.ok)
                 throw new Error(`CDN ${res.status}`);

@@ -39,6 +39,7 @@ export declare class WeixinApi {
 export declare class WeixinLoginApi {
     private baseUrl;
     constructor(baseUrl: string);
+    private request;
     getQrCode(): Promise<QrCodeResponse>;
     getQrCodeStatus(qrcode: string): Promise<QrCodeStatusResponse>;
 }

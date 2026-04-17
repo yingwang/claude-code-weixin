@@ -112,13 +112,20 @@ export class WeixinLoginApi {
     constructor(baseUrl) {
         this.baseUrl = baseUrl;
     }
-    async getQrCode() {
-        const res = await fetch(`${this.baseUrl}/ilink/bot/get_bot_qrcode?bot_type=3`, { headers: { "Content-Type": "application/json" } });
+    async request(path) {
+        const res = await fetch(`${this.baseUrl}${path}`, {
+            headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status} ${res.statusText} from ${path}`);
+        }
         return res.json();
     }
+    async getQrCode() {
+        return this.request("/ilink/bot/get_bot_qrcode?bot_type=3");
+    }
     async getQrCodeStatus(qrcode) {
-        const res = await fetch(`${this.baseUrl}/ilink/bot/get_qrcode_status?qrcode=${encodeURIComponent(qrcode)}`, { headers: { "Content-Type": "application/json" } });
-        return res.json();
+        return this.request(`/ilink/bot/get_qrcode_status?qrcode=${encodeURIComponent(qrcode)}`);
     }
 }
 //# sourceMappingURL=api.js.map
